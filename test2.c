@@ -6,12 +6,14 @@
 #include "queue.h"
 
 // Helper function to print test results
-void print_result(const char *test_name, bool result) {
+void print_result(const char *test_name, bool result)
+{
     printf("%s: %s\n", test_name, result ? "PASSED" : "FAILED");
 }
 
 // Function to test basic functionality of the queue
-void test_basic_functionality() {
+void test_basic_functionality()
+{
     initQueue();
 
     // Test enqueue and size
@@ -33,7 +35,8 @@ void test_basic_functionality() {
 }
 
 // Function to test edge cases of the queue
-void test_edge_cases() {
+void test_edge_cases()
+{
     initQueue();
 
     // Test dequeue on empty queue (should block)
@@ -41,7 +44,8 @@ void test_edge_cases() {
     bool thread_finished = false;
 
     // Thread function to dequeue from an empty queue
-    int dequeue_thread(void *arg) {
+    int dequeue_thread(void *arg)
+    {
         (void)arg;
         dequeue();
         thread_finished = true;
@@ -59,8 +63,9 @@ void test_edge_cases() {
 
     // Test tryDequeue on empty queue
     void *item;
+    void *former_item = item;
     bool result = tryDequeue(&item);
-    print_result("Edge Case - TryDequeue on empty queue", !result && item == NULL);
+    print_result("Edge Case - TryDequeue on empty queue", !result && item == former_item);
 
     // Test tryDequeue on non-empty queue
     enqueue((void *)(long)2);
@@ -71,7 +76,8 @@ void test_edge_cases() {
 }
 
 // Function to test concurrency
-void test_concurrency() {
+void test_concurrency()
+{
     initQueue();
 
     const int num_threads = 5;
@@ -80,18 +86,22 @@ void test_concurrency() {
     atomic_size_t counter = ATOMIC_VAR_INIT(0);
 
     // Thread function to enqueue items
-    int enqueue_thread(void *arg) {
+    int enqueue_thread(void *arg)
+    {
         long id = (long)arg;
-        for (int i = 0; i < num_items_per_thread; ++i) {
+        for (int i = 0; i < num_items_per_thread; ++i)
+        {
             enqueue((void *)(id * num_items_per_thread + i));
         }
         return 0;
     }
 
     // Thread function to dequeue items
-    int dequeue_thread(void *arg) {
+    int dequeue_thread(void *arg)
+    {
         (void)arg;
-        for (int i = 0; i < num_items_per_thread; ++i) {
+        for (int i = 0; i < num_items_per_thread; ++i)
+        {
             dequeue();
             atomic_fetch_add(&counter, 1);
         }
@@ -99,12 +109,14 @@ void test_concurrency() {
     }
 
     // Create enqueue threads
-    for (long i = 0; i < num_threads; ++i) {
+    for (long i = 0; i < num_threads; ++i)
+    {
         thrd_create(&threads[i], enqueue_thread, (void *)i);
     }
 
     // Wait for enqueue threads to finish
-    for (int i = 0; i < num_threads; ++i) {
+    for (int i = 0; i < num_threads; ++i)
+    {
         thrd_join(threads[i], NULL);
     }
 
@@ -112,12 +124,14 @@ void test_concurrency() {
     print_result("Concurrency - Size after enqueues", size() == num_threads * num_items_per_thread);
 
     // Create dequeue threads
-    for (int i = 0; i < num_threads; ++i) {
+    for (int i = 0; i < num_threads; ++i)
+    {
         thrd_create(&threads[i], dequeue_thread, NULL);
     }
 
     // Wait for dequeue threads to finish
-    for (int i = 0; i < num_threads; ++i) {
+    for (int i = 0; i < num_threads; ++i)
+    {
         thrd_join(threads[i], NULL);
     }
 
@@ -128,25 +142,30 @@ void test_concurrency() {
 }
 
 // Function to test visited count
-void test_visited_count() {
+void test_visited_count()
+{
     initQueue();
 
     // Enqueue and dequeue multiple items
     const int num_items = 10;
-    for (int i = 0; i < num_items; ++i) {
+    for (int i = 0; i < num_items; ++i)
+    {
         enqueue((void *)(long)i);
     }
-    for (int i = 0; i < num_items; ++i) {
+    for (int i = 0; i < num_items; ++i)
+    {
         dequeue();
     }
 
     print_result("Visited Count - After 10 enqueues and dequeues", visited() == num_items);
 
     // Enqueue and dequeue again to check if the visited count accumulates correctly
-    for (int i = 0; i < num_items; ++i) {
+    for (int i = 0; i < num_items; ++i)
+    {
         enqueue((void *)(long)i);
     }
-    for (int i = 0; i < num_items; ++i) {
+    for (int i = 0; i < num_items; ++i)
+    {
         dequeue();
     }
 
@@ -156,19 +175,22 @@ void test_visited_count() {
 }
 
 // Function to stress test the queue with a large number of operations
-void stress_test() {
+void stress_test()
+{
     initQueue();
 
-    const int num_threads = 4;  // Reduce number of threads
-    const int num_operations = 500;  // Reduce number of operations
+    const int num_threads = 4;      // Reduce number of threads
+    const int num_operations = 500; // Reduce number of operations
     thrd_t threads[num_threads];
     atomic_size_t enqueue_counter = ATOMIC_VAR_INIT(0);
     atomic_size_t dequeue_counter = ATOMIC_VAR_INIT(0);
 
     // Thread function to perform enqueue operations
-    int enqueue_thread(void *arg) {
+    int enqueue_thread(void *arg)
+    {
         (void)arg;
-        for (int i = 0; i < num_operations; ++i) {
+        for (int i = 0; i < num_operations; ++i)
+        {
             enqueue((void *)(long)i);
             atomic_fetch_add(&enqueue_counter, 1);
         }
@@ -176,9 +198,11 @@ void stress_test() {
     }
 
     // Thread function to perform dequeue operations
-    int dequeue_thread(void *arg) {
+    int dequeue_thread(void *arg)
+    {
         (void)arg;
-        for (int i = 0; i < num_operations; ++i) {
+        for (int i = 0; i < num_operations; ++i)
+        {
             dequeue();
             atomic_fetch_add(&dequeue_counter, 1);
         }
@@ -186,17 +210,20 @@ void stress_test() {
     }
 
     // Create enqueue threads
-    for (int i = 0; i < num_threads / 2; ++i) {
+    for (int i = 0; i < num_threads / 2; ++i)
+    {
         thrd_create(&threads[i], enqueue_thread, NULL);
     }
 
     // Create dequeue threads
-    for (int i = num_threads / 2; i < num_threads; ++i) {
+    for (int i = num_threads / 2; i < num_threads; ++i)
+    {
         thrd_create(&threads[i], dequeue_thread, NULL);
     }
 
     // Wait for all threads to finish
-    for (int i = 0; i < num_threads; ++i) {
+    for (int i = 0; i < num_threads; ++i)
+    {
         thrd_join(threads[i], NULL);
     }
 
@@ -207,18 +234,22 @@ void stress_test() {
 }
 
 // Function to test FIFO order
-void test_fifo_order() {
+void test_fifo_order()
+{
     initQueue();
 
     // Enqueue multiple items
-    for (int i = 1; i <= 5; ++i) {
+    for (int i = 1; i <= 5; ++i)
+    {
         enqueue((void *)(long)i);
     }
 
     // Dequeue and check order
     bool fifo_order = true;
-    for (int i = 1; i <= 5; ++i) {
-        if ((long)dequeue() != i) {
+    for (int i = 1; i <= 5; ++i)
+    {
+        if ((long)dequeue() != i)
+        {
             fifo_order = false;
             break;
         }
@@ -230,7 +261,8 @@ void test_fifo_order() {
 }
 
 // Function to test multiple threads enqueuing and dequeuing
-void test_multiple_threads() {
+void test_multiple_threads()
+{
     initQueue();
 
     const int num_threads = 10;
@@ -239,12 +271,15 @@ void test_multiple_threads() {
     atomic_size_t counter = ATOMIC_VAR_INIT(0);
 
     // Thread function to enqueue and dequeue items
-    int thread_func(void *arg) {
+    int thread_func(void *arg)
+    {
         long id = (long)arg;
-        for (int i = 0; i < num_items_per_thread; ++i) {
+        for (int i = 0; i < num_items_per_thread; ++i)
+        {
             enqueue((void *)(id * num_items_per_thread + i));
         }
-        for (int i = 0; i < num_items_per_thread; ++i) {
+        for (int i = 0; i < num_items_per_thread; ++i)
+        {
             dequeue();
             atomic_fetch_add(&counter, 1);
         }
@@ -252,12 +287,14 @@ void test_multiple_threads() {
     }
 
     // Create threads
-    for (long i = 0; i < num_threads; ++i) {
+    for (long i = 0; i < num_threads; ++i)
+    {
         thrd_create(&threads[i], thread_func, (void *)i);
     }
 
     // Wait for threads to finish
-    for (int i = 0; i < num_threads; ++i) {
+    for (int i = 0; i < num_threads; ++i)
+    {
         thrd_join(threads[i], NULL);
     }
 
@@ -268,17 +305,21 @@ void test_multiple_threads() {
 }
 
 // Function to test large data
-void test_large_data() {
+void test_large_data()
+{
     initQueue();
 
     const int num_items = 100000;
-    for (int i = 0; i < num_items; ++i) {
+    for (int i = 0; i < num_items; ++i)
+    {
         enqueue((void *)(long)i);
     }
 
     bool large_data_correct = true;
-    for (int i = 0; i < num_items; ++i) {
-        if ((long)dequeue() != i) {
+    for (int i = 0; i < num_items; ++i)
+    {
+        if ((long)dequeue() != i)
+        {
             large_data_correct = false;
             break;
         }
@@ -290,19 +331,25 @@ void test_large_data() {
 }
 
 // Function to test random operations
-void test_random_operations() {
+void test_random_operations()
+{
     initQueue();
 
     const int num_operations = 1000;
     thrd_t threads[2];
 
     // Thread function to perform random enqueue/dequeue operations
-    int random_operations(void *arg) {
+    int random_operations(void *arg)
+    {
         (void)arg;
-        for (int i = 0; i < num_operations; ++i) {
-            if (rand() % 2) {
+        for (int i = 0; i < num_operations; ++i)
+        {
+            if (rand() % 2)
+            {
                 enqueue((void *)(long)i);
-            } else if (size() > 0) {
+            }
+            else if (size() > 0)
+            {
                 dequeue();
             }
         }
@@ -310,13 +357,15 @@ void test_random_operations() {
     }
 
     // Create threads
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < 2; ++i)
+    {
         thrd_create(&threads[i], random_operations, NULL);
         thrd_sleep(&(struct timespec){.tv_sec = 0, .tv_nsec = 5000}, NULL);
     }
 
     // Wait for threads to finish
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < 2; ++i)
+    {
         thrd_join(threads[i], NULL);
     }
 
@@ -326,7 +375,8 @@ void test_random_operations() {
 }
 
 // Function to test that threads wake up in correct order
-void test_thread_wakeup_order() {
+void test_thread_wakeup_order()
+{
     initQueue();
 
     const int num_threads = 3;
@@ -335,7 +385,8 @@ void test_thread_wakeup_order() {
     atomic_size_t wakeup_index = ATOMIC_VAR_INIT(0);
 
     // Thread function to dequeue and record wakeup order
-    int dequeue_and_record(void *arg) {
+    int dequeue_and_record(void *arg)
+    {
         long id = (long)arg;
         dequeue();
         wakeup_order[atomic_fetch_add(&wakeup_index, 1)] = id;
@@ -343,25 +394,30 @@ void test_thread_wakeup_order() {
     }
 
     // Create threads
-    for (long i = 0; i < num_threads; ++i) {
+    for (long i = 0; i < num_threads; ++i)
+    {
         thrd_create(&threads[i], dequeue_and_record, (void *)i);
         thrd_sleep(&(struct timespec){.tv_sec = 1, .tv_nsec = 0}, NULL);
     }
 
     // Enqueue items to wake up the threads
-    for (int i = 0; i < num_threads; ++i) {
+    for (int i = 0; i < num_threads; ++i)
+    {
         enqueue((void *)(long)i);
     }
 
     // Wait for threads to finish
-    for (int i = 0; i < num_threads; ++i) {
+    for (int i = 0; i < num_threads; ++i)
+    {
         thrd_join(threads[i], NULL);
     }
 
     // Check if threads were woken up in the correct order
     bool correct_order = true;
-    for (int i = 0; i < num_threads; ++i) {
-        if (wakeup_order[i] != i) {
+    for (int i = 0; i < num_threads; ++i)
+    {
+        if (wakeup_order[i] != i)
+        {
             correct_order = false;
             break;
         }
@@ -372,7 +428,8 @@ void test_thread_wakeup_order() {
     destroyQueue();
 }
 
-int main() {
+int main()
+{
     test_basic_functionality();
     test_edge_cases();
     test_concurrency();

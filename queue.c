@@ -30,7 +30,8 @@ typedef struct Queue
 void append_item(Node *item, Queue *q)
 {
     q->size++;
-    if (q->size == 0)
+
+    if (q->size == 1)
     {
         q->head = item;
         q->tail = item;
@@ -39,6 +40,18 @@ void append_item(Node *item, Queue *q)
 
     q->tail->next = item;
     q->tail = item;
+    return;
+}
+
+void destroy_list(Node *head)
+{
+    Node *tmp;
+    while (head != NULL)
+    {
+        tmp = head;
+        head = head->next;
+        free(tmp);
+    }
     return;
 }
 
@@ -69,7 +82,12 @@ void initQueue(void)
 
 void destroyQueue(void)
 {
-    // destory linked lists and free queues
+    destroy_list(data_queue->head);
+    destroy_list(read_queue->head);
+    free(data_queue);
+    free(read_queue);
+    mtx_destroy(&queue_lock);
+    return;
 }
 
 void enqueue(void *data)
@@ -87,8 +105,8 @@ void enqueue(void *data)
     // awake the oldest member of read_queue (if there is one).
     if (read_queue->size > 0)
     {
-        cnd_t ticket = *((cnd_t *)read_queue->head->data);
-        cnd_signal(&ticket);
+        // cnd_t ticket = *((cnd_t *)read_queue->head->data);
+        cnd_signal(read_queue->head->data);
         tmp = read_queue->head;
         read_queue->head = tmp->next;
         free(tmp);
@@ -107,21 +125,23 @@ void *dequeue(void)
     // aquire lock.
     mtx_lock(&queue_lock);
 
-    cnd_t ticket;
+    // cnd_t ticket;
     Node *tmp;
     void *data;
     if (data_queue->size == 0)
     {
-        cnd_init(&ticket);
         tmp = (Node *)malloc(sizeof(Node));
-        tmp->data = &ticket;
         tmp->next = NULL;
+        tmp->data = (cnd_t *)malloc(sizeof(cnd_t));
         append_item(tmp, read_queue);
-        cnd_wait(&ticket, &queue_lock);
+        cnd_init(tmp->data);
+        cnd_wait(tmp->data, &queue_lock);
     }
     // This is for added sequrity (for example in case spurios wakeups ARE allowed or in case of bugs).
     while (data_queue->size == 0)
-        cnd_wait(&ticket, &queue_lock);
+    {
+        cnd_wait(tmp->data, &queue_lock);
+    }
 
     tmp = data_queue->head;
     data = tmp->data;
@@ -130,12 +150,33 @@ void *dequeue(void)
     if (data_queue->head == NULL)
         data_queue->tail = NULL;
 
+    data_queue->size--;
+    data_queue->visited++;
+    mtx_unlock(&queue_lock);
     return data;
 }
 
-bool tryDequeue(void **args)
+bool tryDequeue(void **item)
 {
-    return false;
+    if (data_queue->size == 0)
+    {
+        return false;
+    }
+    // aquire lock.
+    mtx_lock(&queue_lock);
+    Node *tmp;
+
+    tmp = data_queue->head;
+    *item = tmp->data;
+    data_queue->head = tmp->next;
+    free(tmp);
+    if (data_queue->head == NULL)
+        data_queue->tail = NULL;
+
+    data_queue->size--;
+    data_queue->visited++;
+    mtx_unlock(&queue_lock);
+    return true;
 }
 
 size_t size(void)

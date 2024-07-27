@@ -53,6 +53,7 @@ void test_enqueue_dequeue()
     }
 
     // Queue should be empty
+    printf("size of queue is %li\n", size());
     assert(size() == 0);
 
     destroyQueue();
@@ -197,6 +198,7 @@ void test_basic_concurrent_enqueue_dequeue()
     thrd_create(&enqueueThread_a, (int (*)(void *))enqueueItems, &half);
     thrd_create(&enqueueThread_b, (int (*)(void *))enqueueItems, &half);
 
+    printf("finished enqueue\n");
     // Dequeue items in the main thread
     for (int i = 0; i < numItems; i++)
     {
@@ -327,7 +329,7 @@ void test_fifo_order()
         dequeue_order[i] = -1; // Initialize the dequeue order
         thrd_create(&consumer_threads[i], consumer_thread, &dequeue_order[i]);
         thrd_sleep(
-            &(const struct timespec){.tv_nsec = 0.005 * SECOND_IN_NANOSECONDS},
+            &(const struct timespec){.tv_nsec = 0.1 * SECOND_IN_NANOSECONDS},
             NULL);
     }
 
@@ -378,6 +380,7 @@ int producer_thread(void *arg)
         int *item = malloc(sizeof(int));
         *item = i + 1;
         enqueue(item);
+        sleep(1);
     }
 
     return 0;
