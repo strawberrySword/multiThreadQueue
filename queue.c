@@ -22,8 +22,8 @@ typedef struct Queue
 {
     Node *head;
     Node *tail;
-    atomic_size_t size;
-    atomic_size_t visited;
+    size_t size;
+    size_t visited;
 } Queue;
 
 /* ### List Helper Functions ###*/
@@ -128,7 +128,7 @@ void *dequeue(void)
     // cnd_t ticket;
     Node *tmp;
     void *data;
-    if (data_queue->size == 0)
+    if (data_queue->size == 0 || read_queue->size > 0)
     {
         tmp = (Node *)malloc(sizeof(Node));
         tmp->next = NULL;
