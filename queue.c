@@ -31,7 +31,7 @@ void append_item(Node *item, Queue *q)
 {
     q->size++;
 
-    if (q->size == 1)
+    if (q->head == NULL)
     {
         q->head = item;
         q->tail = item;
@@ -41,6 +41,19 @@ void append_item(Node *item, Queue *q)
     q->tail->next = item;
     q->tail = item;
     return;
+}
+
+void *remove_head(Queue *q)
+{
+    Node *tmp = q->head;
+    void* data = tmp->data;
+    q->head = tmp->next;
+    free(tmp);
+    if (q->head == NULL)
+        q->tail = NULL;
+    q->size--;
+    q->visited++;
+    return data;
 }
 
 void destroy_list(Node *head)
@@ -107,12 +120,7 @@ void enqueue(void *data)
     {
         // cnd_t ticket = *((cnd_t *)read_queue->head->data);
         cnd_signal(read_queue->head->data);
-        tmp = read_queue->head;
-        read_queue->head = tmp->next;
-        free(tmp);
-        if (read_queue->head == NULL)
-            read_queue->tail = NULL;
-        read_queue->size--;
+        remove_head(read_queue);
     }
 
     // release lock.
@@ -143,15 +151,7 @@ void *dequeue(void)
         cnd_wait(tmp->data, &queue_lock);
     }
 
-    tmp = data_queue->head;
-    data = tmp->data;
-    data_queue->head = tmp->next;
-    free(tmp);
-    if (data_queue->head == NULL)
-        data_queue->tail = NULL;
-
-    data_queue->size--;
-    data_queue->visited++;
+    data = remove_head(data_queue);
     mtx_unlock(&queue_lock);
     return data;
 }
