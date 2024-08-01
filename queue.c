@@ -46,7 +46,7 @@ void append_item(Node *item, Queue *q)
 void *remove_head(Queue *q)
 {
     Node *tmp = q->head;
-    void *data = tmp->data;
+    void* data = tmp->data;
     q->head = tmp->next;
     free(tmp);
     if (q->head == NULL)
@@ -72,7 +72,7 @@ void destroy_list(Node *head)
 
 // this is lock for enqueue and dequeue.
 // TODO consider using one queue for enqueue and one for dequeue
-mtx_t read_lock, write_lock;
+mtx_t queue_lock;
 static Queue *data_queue;
 // please note we used the same structure for read_queue even though its visited value is unused. this means the visited value of read_queue will not be maintained.
 static Queue *read_queue;
@@ -105,53 +105,35 @@ void destroyQueue(void)
 
 void enqueue(void *data)
 {
-    // aquire lock.
-    mtx_lock(&write_lock);
-    bool is_read_lock_used = false;
-    // In case the queue size is smaller then 2 simultanious appends and removes from the list can cause problems. otherwise head and tail are pointing to different locations and this is ok.
-    if (data_queue->size <= 1)
-    {
-        is_read_lock_used = true;
-        mtx_lock(&read_lock);
-    }
-
     // write data to queue, increase data_queue->size by one.
     Node *tmp = (Node *)malloc(sizeof(Node));
     tmp->data = data;
     tmp->next = NULL;
 
+    // aquire lock.
+    mtx_lock(&queue_lock);
     append_item(tmp, data_queue);
 
     // awake the oldest member of read_queue (if there is one).
     if (read_queue->size > 0)
     {
         cnd_signal(read_queue->head->data);
+        remove_head(read_queue);
     }
 
     // release lock.
-    mtx_unlock(&write_lock);
-    if (is_read_lock_used)
-    {
-        mtx_unlock(&read_lock);
-    }
+    mtx_unlock(&queue_lock);
     return;
 }
 
 void *dequeue(void)
 {
-    // aquire lock.
-    mtx_lock(&read_lock);
-    bool is_write_lock_used = false;
-
-    if (data_queue->size <= 1)
-    {
-        is_write_lock_used = true;
-        mtx_lock(&write_lock);
-    }
-
-    // cnd_t ticket;
     Node *tmp;
     void *data;
+
+    // aquire lock.
+    mtx_lock(&queue_lock);
+
     if (data_queue->size == 0 || read_queue->size > 0)
     {
         tmp = (Node *)malloc(sizeof(Node));
@@ -163,44 +145,24 @@ void *dequeue(void)
     }
     // Note: we assume there can not be spurios wake ups of threads. in general we should add here a while loop to make sure there are items to deque. (it would be wise to add it either way to save us in case of bugs).
 
-    // Nots: we can not assume that the head of read_queue is the CV this thread waited for.
-    // Because in specific scheduler choices a different thread can run first.
-    // Either way all the CV of threads that finished dequeing from data_queue will be dequeued from read_queue and this is the important part. (if we move this line to enqueue we can guruantee that but it may cause issues with the read_lock and write_lock)
-    remove_head(read_queue);
-
     data = remove_head(data_queue);
-    // release lock.
-    mtx_unlock(&read_lock);
-    if (is_write_lock_used)
-    {
-        mtx_unlock(&write_lock);
-    }
+    mtx_unlock(&queue_lock);
     return data;
 }
 
 bool tryDequeue(void **item)
 {
-    // aquire lock.
-    mtx_lock(&read_lock);
-    bool is_write_lock_used = false;
-
-    if (data_queue->size <= 1)
-    {
-        is_write_lock_used = true;
-        mtx_lock(&write_lock);
-    }
-
     if (data_queue->size == 0)
     {
         return false;
     }
 
+    // aquire lock.
+    mtx_lock(&queue_lock);
+
     *item = remove_head(data_queue);
-    mtx_unlock(&read_lock);
-    if (is_write_lock_used)
-    {
-        mtx_unlock(&write_lock);
-    }
+
+    mtx_unlock(&queue_lock);
     return true;
 }
 
